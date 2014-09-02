@@ -1,0 +1,67 @@
+#!/usr/bin/env ruby
+require 'getoptlong'
+require 'fileutils'
+
+Current_Dir = Dir.getwd
+
+opts = GetoptLong.new(
+  ['--compile', '-c', GetoptLong::NO_ARGUMENT],
+  ['--exe', '-e', GetoptLong::REQUIRED_ARGUMENT],
+  ['--help', '-h', GetoptLong::NO_ARGUMENT]
+)
+
+Help_Text = <<-EOF
+usage: makejava [--compile | -c] [--exe | -e=name] [--clean]
+Options:
+  --compile   compiles the .java source files to .class object files
+  --exe       specifies the name of the executable file (will compile sources when called)
+  --help      show this help text
+Commands:
+  clean     removes all .class object files
+EOF
+
+def error message
+  puts "Error: #{message}"
+  exit(-1)
+end
+
+def sys_call command
+  output = %x(#{command})
+  puts output if output != ""
+end
+
+def compile 
+  src_files = Dir['*.java']
+
+  sys_call "javac #{src_files.join(" ")}"
+end
+
+def make_exe name
+  class_files = Dir['*.class']
+
+  class_name = name + ".class"
+  error("executable name (\"#{name}\") should match the name of the main class") if !class_files.include? class_name
+
+  sys_call "jar cf #{name} #{class_files.join " "}"
+end
+
+def clean
+  FileUtils.rm Dir['*.class']
+end
+
+opts.each do |opt, arg|
+  case opt
+  when '--compile'
+    compile
+  when '--exe'
+    compile
+    make_exe arg
+  when '--clean'
+    clean
+  when '--help'
+    puts Help_Text
+    exit(0)
+  end
+end
+
+clean if ARGV[0] == "clean"  
